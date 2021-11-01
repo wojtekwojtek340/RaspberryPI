@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "PI": {
+      "commandName": "Project",
+      "remoteDebugEnabled": false,
+      "remoteDebugMachine": "127.0.0.1:4024 (DESKTOP-TH6F0L5)",
+      "authenticationMode": "Windows",
+      "nativeDebugging": false
+    }
+  }
+}

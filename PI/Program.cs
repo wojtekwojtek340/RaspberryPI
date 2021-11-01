@@ -3,6 +3,7 @@ using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
 using System;
 using System.Device.Gpio;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +29,14 @@ namespace PI
         #endregion
         static void Main(string[] args)
         {
+            Console.WriteLine("Oczekiwanie na dołączenie do debugera");
+            while (!Debugger.IsAttached)
+            {
+                Thread.Sleep(300);
+            }
+            Console.WriteLine("Podłączono debuger");
+
+
             //stworzenie obiektu do obsługi raspberry
             controller = new GpioController();            
             controller.OpenPin(PIN_04, PinMode.Output);
