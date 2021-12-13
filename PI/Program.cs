@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-// TBD - biblioteki czujników
 
 namespace PI
 {
@@ -26,7 +25,11 @@ namespace PI
 
         #region Raspberry
         static GpioController controller;
+        static readonly int PIN_02 = 2;
+        static readonly int PIN_03 = 3;
         static readonly int PIN_04 = 4;
+        static readonly int PIN_14 = 14;
+        static int fazaSilnika = 0;
         public const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
         public const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
         public const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
@@ -45,6 +48,58 @@ namespace PI
         #endregion
         static void Main(string[] args)
         {
+            controller = new GpioController();
+            controller.OpenPin(PIN_02, PinMode.Output);
+            controller.OpenPin(PIN_03, PinMode.Output);
+            controller.OpenPin(PIN_04, PinMode.Output);
+            controller.OpenPin(PIN_14, PinMode.Output);
+            fazaSilnika = 0;
+            controller.Write(PIN_02, 1);
+            controller.Write(PIN_03, 0);
+            controller.Write(PIN_04, 0);
+            controller.Write(PIN_14, 0);
+            while (true) //test silnika krokowego
+            {
+                Console.WriteLine("krok ");
+                switch (fazaSilnika)
+                {
+                    case 0: //1000 jest i zmiana na case 1 itd.
+                        controller.Write(PIN_03, 1);
+                        fazaSilnika++;
+                        break;
+                    case 1: //1100
+                        controller.Write(PIN_02, 0);
+                        fazaSilnika++;
+                        break;
+                    case 2: //0100
+                        controller.Write(PIN_04, 1);
+                        fazaSilnika++;
+                        break;
+                    case 3: //0110
+                        controller.Write(PIN_03, 0);
+                        fazaSilnika++;
+                        break;
+                    case 4: //0010
+                        controller.Write(PIN_14, 1);
+                        fazaSilnika++;
+                        break;
+                    case 5: //0011
+                        controller.Write(PIN_04, 0);
+                        fazaSilnika++;
+                        break;
+                    case 6: //0001
+                        controller.Write(PIN_02, 1);
+                        fazaSilnika++;
+                        break;
+                    case 7: //1001
+                        controller.Write(PIN_14, 0);
+                        fazaSilnika = 0;
+                        break;
+                    default:
+                        break;
+                }
+                Thread.Sleep(1);
+            }
             Console.WriteLine("Oczekiwanie na dołączenie do debugera");
             while (!Debugger.IsAttached)
             {
@@ -54,7 +109,7 @@ namespace PI
 
 
             //stworzenie obiektu do obsługi raspberry
-            controller = new GpioController();            
+            //controller = new GpioController();            
             controller.OpenPin(PIN_04, PinMode.Output);
 
             //stworzenie obiektów do obsługi komunikacji Wifi

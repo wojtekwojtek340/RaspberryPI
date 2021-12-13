@@ -4,6 +4,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Platforms>AnyCPU;ARM32;ARM64</Platforms>
+    <ApplicationIcon />
+    <Win32Resource />
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
