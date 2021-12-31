@@ -1,2 +1,10 @@
 PI/obj/
-PI/bin
+PI/bin/
+IotHubCommunication/obj/
+IotHubCommunication/bin/
+MobileApp/MobileApp/obj/
+MobileApp/MobileApp/bin/
+MobileApp/MobileApp.Android/obj/
+MobileApp/MobileApp.Android/bin/
+MobileApp/MobileApp.iOS/obj/
+MobileApp/MobileApp.iOS/bin/

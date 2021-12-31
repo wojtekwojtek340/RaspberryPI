@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PI
+namespace IotHubCommunication.CommunicationProvider.Message
 {
     /// <summary>
     /// taka klasa testowa do obsługi odczytu danych wysyałanych do urządzenia.
