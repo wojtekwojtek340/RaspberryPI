@@ -12,16 +12,30 @@ namespace PI.HomeAlgorithm
     {
         #region Raspberry
         static GpioController controller;
-        static readonly int PIN_02 = 2;
+        static readonly int PIN_02 = 2; //Piny silnika krokowego nr 1 - blokada drzwi
         static readonly int PIN_03 = 3;
         static readonly int PIN_04 = 4;
         static readonly int PIN_14 = 14;
-        static int fazaSilnika = 0;
+        static int motorPhase1 = 0;
+        static readonly int PIN_15 = 15; //Piny silnika krokowego nr 2 - podajnik pokarmu
+        static readonly int PIN_17 = 17;
+        static readonly int PIN_18 = 18;
+        static readonly int PIN_27 = 27;
+        static int motorPhase2 = 0;
+        static readonly int PIN_22 = 22; //Pin sterowania zaworem odcinającym odpływ cieczy z miski
+        static readonly int PIN_23 = 23; //Pin sterowania pompką
+        static readonly int PIN_24 = 24; //Pin czujnika obecności HC-SR501
+        static readonly int PIN_10 = 10; //Pin czujnika RFID
+        static readonly int PIN_09 = 9;  //Pin spirali grzejnej
+        static readonly int PIN_25 = 25; //Pin sterowania wentylacją 
         public const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
         public const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
         public const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
         public const double tFood = 43200; //standardowa godzina podania jedzenia kotu wyrażona w sekundach np. 62 to 00:01:02
+        public const double tWater = 43200; //standardowa godzina wymiany wody
         public const double maxFoodDelay = 3600; //maksymalne opóźnienie podania jedzenia wynikające z obecności kota w domku 
+        public const double maxRFIDDelay = 120; //maksymalne opóźnienie zamknięcia drzwi
+        public double RFIDTime = -1; //godzina do której mogą być otwarte drzwi
         static bool isDoorOpen = true;
         static bool isHeatingOn = false;
         static bool isVentilationOn = false;
@@ -41,32 +55,36 @@ namespace PI.HomeAlgorithm
             controller.OpenPin(PIN_03, PinMode.Output);
             controller.OpenPin(PIN_04, PinMode.Output);
             controller.OpenPin(PIN_14, PinMode.Output);
-            fazaSilnika = 0;
+            motorPhase1 = 0;
             controller.Write(PIN_02, 1);
             controller.Write(PIN_03, 0);
             controller.Write(PIN_04, 0);
             controller.Write(PIN_14, 0);
+            controller.OpenPin(PIN_15, PinMode.Output);
+            controller.OpenPin(PIN_17, PinMode.Output);
+            controller.OpenPin(PIN_18, PinMode.Output);
+            controller.OpenPin(PIN_27, PinMode.Output);
+            motorPhase2 = 0;
+            controller.Write(PIN_15, 1);
+            controller.Write(PIN_17, 0);
+            controller.Write(PIN_18, 0);
+            controller.Write(PIN_27, 0);
+            controller.OpenPin(PIN_22, PinMode.Output);
+            controller.OpenPin(PIN_23, PinMode.Output);
+            controller.Write(PIN_22, 0);
+            controller.Write(PIN_23, 0);
+            controller.OpenPin(PIN_24, PinMode.Input);
+            controller.OpenPin(PIN_10, PinMode.Input);
+            controller.OpenPin(PIN_09, PinMode.Output);
+            controller.Write(PIN_09, 0);
+            controller.OpenPin(PIN_25, PinMode.Output);
+            controller.Write(PIN_25, 0);
         }
         public void Start()
         {
             //główna pętla programu
             while (true)
-            {                              
-                // otwieranie i zamykanie blokady drzwi
-                if ((RFID() == true) && (isDoorOpen = false))
-                {
-                    isDoorOpen = true;
-                    Door(isDoorOpen);
-                }
-                else if ((RFID() == false) && (isDoorOpen = true))
-                {
-                    isDoorOpen = false;
-                    Door(isDoorOpen);
-                }
-
-                // obsługa wodopoju
-                // TBD
-
+            {
                 //aktualizowanie godziny
                 if (GetTime() < time)
                 {
@@ -75,11 +93,43 @@ namespace PI.HomeAlgorithm
                 }
                 else time = GetTime();
 
+                // otwieranie i zamykanie blokady drzwi
+                if ((RFID() == true) && (isDoorOpen = false))
+                {
+                    isDoorOpen = true;
+                    Door(isDoorOpen);
+                    RFIDTime = time;
+                }
+                else if ((RFID() == true) && (isDoorOpen = true))
+                {
+                    RFIDTime = time;
+                }
+                else if ((RFID() == false) && (isDoorOpen = true))
+                {
+                    if ((RFIDTime!=(-1)) && (((time < RFIDTime) && (time + 86400 - RFIDTime > maxRFIDDelay)) || ((time >= RFIDTime) && (time - RFIDTime > maxRFIDDelay))))
+                    {
+                        RFIDTime = -1;
+                        isDoorOpen = false;
+                        Door(isDoorOpen);
+                    }
+                }
+
+                // obsługa wodopoju
+                if (time > tWater)
+                {
+                    controller.Write(PIN_22, 1); //otwarcie zaworu
+                    Thread.Sleep(5000);
+                    controller.Write(PIN_22, 0); //zamknięcie zaworu
+                    controller.Write(PIN_23, 1); //uruchomienie pompki
+                    Thread.Sleep(5000);
+                    controller.Write(PIN_22, 0); //wyłączenie pompki
+                }
+
                 // obsługa podajnika jedzenia
                 if ((wasFoodGivenToday == false) && (time > tFood) && ((Presence() == false) || (time > (tFood + maxFoodDelay)))) //obecnosc kota niechciana ze względu na utrudnienie pomiaru masy podanego pokarmu
                 {
                     // podanie jedzenia
-                    // TBD
+                    motorPhase2 = MotorMove(true, motorPhase2, 9000, true, 1, PIN_15, PIN_17, PIN_18, PIN_27);
                     wasFoodGivenToday = true;
                 }
 
@@ -136,50 +186,103 @@ namespace PI.HomeAlgorithm
             }
         }
 
-        private void MotorTest()
-        {
-            while (true) //test silnika krokowego
+        static int MotorMove(bool direction, int motorPhase, int steps, bool halfStepsOn, int stepTime, int PIN_A, int PIN_B, int PIN_C, int PIN_D)
+        {//direction=true - zgodny z regułą prawej dłoni, dla zwrotu wyjścia wału z obudowy, stepTime - czas pomiędzy kolejnymi krokami
+            int stepsMade = 0;
+            if (direction == true)
             {
-                Console.WriteLine("krok ");
-                switch (fazaSilnika)
+                while (stepsMade < steps)
+                {
+                    switch (motorPhase)
+                    {
+                        case 0: //1000 jest i zmiana na case 1 itd.
+                            controller.Write(PIN_B, 1);
+                            motorPhase++;
+                            break;
+                        case 1: //1100
+                            controller.Write(PIN_A, 0);
+                            motorPhase++;
+                            break;
+                        case 2: //0100
+                            controller.Write(PIN_C, 1);
+                            motorPhase++;
+                            break;
+                        case 3: //0110
+                            controller.Write(PIN_B, 0);
+                            motorPhase++;
+                            break;
+                        case 4: //0010
+                            controller.Write(PIN_D, 1);
+                            motorPhase++;
+                            break;
+                        case 5: //0011
+                            controller.Write(PIN_C, 0);
+                            motorPhase++;
+                            break;
+                        case 6: //0001
+                            controller.Write(PIN_A, 1);
+                            motorPhase++;
+                            break;
+                        case 7: //1001
+                            controller.Write(PIN_D, 0);
+                            motorPhase = 0;
+                            break;
+                        default:
+                            break;
+                    }
+                    stepsMade++;
+                    if(halfStepsOn || (stepsMade % 2 == 0))
+                    {
+                        Thread.Sleep(stepTime);
+                    }
+                }
+            }
+            else
+            {
+                switch (motorPhase)
                 {
                     case 0: //1000 jest i zmiana na case 1 itd.
-                        controller.Write(PIN_03, 1);
-                        fazaSilnika++;
+                        controller.Write(PIN_D, 1);
+                        motorPhase = 7;
                         break;
                     case 1: //1100
-                        controller.Write(PIN_02, 0);
-                        fazaSilnika++;
+                        controller.Write(PIN_B, 0);
+                        motorPhase--;
                         break;
                     case 2: //0100
-                        controller.Write(PIN_04, 1);
-                        fazaSilnika++;
+                        controller.Write(PIN_A, 1);
+                        motorPhase--;
                         break;
                     case 3: //0110
-                        controller.Write(PIN_03, 0);
-                        fazaSilnika++;
+                        controller.Write(PIN_C, 0);
+                        motorPhase--;
                         break;
                     case 4: //0010
-                        controller.Write(PIN_14, 1);
-                        fazaSilnika++;
+                        controller.Write(PIN_B, 1);
+                        motorPhase--;
                         break;
                     case 5: //0011
-                        controller.Write(PIN_04, 0);
-                        fazaSilnika++;
+                        controller.Write(PIN_D, 0);
+                        motorPhase--;
                         break;
                     case 6: //0001
-                        controller.Write(PIN_02, 1);
-                        fazaSilnika++;
+                        controller.Write(PIN_C, 1);
+                        motorPhase--;
                         break;
                     case 7: //1001
-                        controller.Write(PIN_14, 0);
-                        fazaSilnika = 0;
+                        controller.Write(PIN_A, 0);
+                        motorPhase--;
                         break;
                     default:
                         break;
                 }
-                Thread.Sleep(10);
+                stepsMade++;
+                if (halfStepsOn || (stepsMade % 2 == 0))
+                {
+                    Thread.Sleep(stepTime);
+                }
             }
+            return motorPhase;
         }
 
         static double TempIn() // temperatura wewnątrz domku
@@ -192,9 +295,7 @@ namespace PI.HomeAlgorithm
 
         static double TempOut() // temperatura na zewnątrz domku
         {
-            //odczytanie temp. zewn.
-            // TBD
-            double Tz = 15; // TYMCZASOWO USTAWIONA WARTOŚĆ
+            double Tz = 0; //zrezygnowano z tego czujnika, więc przyjęto wartość zapewniającą włączenie ogrzewania przy wentylacji
             return Tz;
         }
 
@@ -216,28 +317,24 @@ namespace PI.HomeAlgorithm
         static bool Presence() // 1 - stwierdzono obecnosc kota w domku, 0 - nie stwierdzono
         {
             //sprawdzenie obecnosci
-            // TBD
-            bool presence = true; // TYMCZASOWO USTAWIONA WARTOŚĆ
-            return presence;
+            return PinValue.High.Equals(controller.Read(PIN_24));
         }
 
         static bool RFID() // 1 - wykryto znacznik RFID kota, 0 - nie wykryto
         {
             //sprawdzenie RFID
-            // TBD
-            bool rfid = true; // TYMCZASOWO USTAWIONA WARTOŚĆ
-            return rfid;
+            return PinValue.High.Equals(controller.Read(PIN_10));
         }
 
         static void Door(bool isOpen) // 1 - odblokuj drzwi, 0 - zablokuj drzwi
         {
             if (isOpen) //otwieranie drzwi 
             {
-                //TBD
+                motorPhase1 = MotorMove(true, motorPhase1, 1125, false, 1, PIN_02, PIN_03, PIN_04, PIN_14);
             }
             else //zamykanie drzwi  
             {
-                //TBD
+                motorPhase1 = MotorMove(false, motorPhase1, 1125, false, 1, PIN_02, PIN_03, PIN_04, PIN_14);
             }
         }
 
@@ -245,11 +342,11 @@ namespace PI.HomeAlgorithm
         {
             if (isOn) //wlaczanie spirali grzejnej
             {
-                //TBD
+                controller.Write(PIN_09, 1);
             }
             else //wylaczanie spirali grzejnej
             {
-                //TBD
+                controller.Write(PIN_09, 0);
             }
         }
 
@@ -257,21 +354,18 @@ namespace PI.HomeAlgorithm
         {
             if (isOn) //wlaczenie wentylacji
             {
-                //TBD
+                controller.Write(PIN_25, 1);
             }
             else //wylaczenie wentylacji
             {
-                //TBD
+                controller.Write(PIN_25, 0);
             }
         }
 
-        static int GetTime()
+        static int GetTime() // zwraca pore dnia w sekundach
         {
-            string s = DateTime.Now.ToString("T");
-            // odpowiednia konwersja zmiennej typu string na int - trzeba sprawdzić format, może przydać się atoi()
-            //TBD
-            int t = 10; //TYMACZASOWO WPISANA WARTOŚĆ
+            int t = (int)(DateTime.Now - DateTime.Today).TotalSeconds;
             return t;
-        } // zwraca pore dnia w sekundach
+        }
     }
 }
