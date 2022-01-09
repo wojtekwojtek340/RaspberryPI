@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.DHTxx;
 
 namespace PI.HomeAlgorithm
 {
@@ -28,6 +29,8 @@ namespace PI.HomeAlgorithm
         static readonly int PIN_10 = 10; //Pin czujnika RFID
         static readonly int PIN_09 = 9;  //Pin spirali grzejnej
         static readonly int PIN_25 = 25; //Pin sterowania wentylacją 
+        static readonly int PIN_11 = 11; //Pin czujnika temperatury i wilgotności
+        static Dht11 sensor1;
         public const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
         public const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
         public const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
@@ -79,6 +82,7 @@ namespace PI.HomeAlgorithm
             controller.Write(PIN_09, 0);
             controller.OpenPin(PIN_25, PinMode.Output);
             controller.Write(PIN_25, 0);
+            sensor1 = new Dht11(PIN_11);
         }
         public void Start()
         {
@@ -288,8 +292,7 @@ namespace PI.HomeAlgorithm
         static double TempIn() // temperatura wewnątrz domku
         {
             //odczytanie temp. wewn. domku
-            // TBD
-            double Tw = 20; // TYMCZASOWO USTAWIONA WARTOŚĆ
+            double Tw = Convert.ToDouble($"{sensor1.Temperature.DegreesCelsius:0.#}");
             return Tw;
         }
 
@@ -302,8 +305,7 @@ namespace PI.HomeAlgorithm
         static double Humidity() // wilgotność wewnątrz domku
         {
             //odczytanie wilgotnosci
-            // TBD
-            double H = 85; // TYMCZASOWO USTAWIONA WARTOŚĆ
+            double H = Convert.ToDouble($"{sensor1.Humidity:0.#}");
             return H;
         }
 
