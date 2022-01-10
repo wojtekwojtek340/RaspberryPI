@@ -1,5 +1,7 @@
 PI/obj/
 PI/bin/
+Communication/obj/
+Communication/bin/
 IotHubCommunication/obj/
 IotHubCommunication/bin/
 MobileApp/MobileApp/obj/

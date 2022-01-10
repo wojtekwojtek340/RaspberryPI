@@ -6,7 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="cat.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="cat.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Xamarin.Forms" Version="5.0.0.2012" />  
     <PackageReference Include="Xamarin.Essentials" Version="1.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Communication\Communication.csproj" />
   </ItemGroup>
 </Project>

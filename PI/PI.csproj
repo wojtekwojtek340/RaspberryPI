@@ -18,8 +18,4 @@
     <PackageReference Include="UnitsNet" Version="4.109.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\IotHubCommunication\IotHubCommunication.csproj" />
-  </ItemGroup>
-
 </Project>

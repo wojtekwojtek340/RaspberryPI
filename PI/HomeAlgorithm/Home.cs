@@ -12,25 +12,25 @@ namespace PI.HomeAlgorithm
     public class Home
     {
         #region Raspberry
-        static GpioController controller;
-        static readonly int PIN_02 = 2; //Piny silnika krokowego nr 1 - blokada drzwi
-        static readonly int PIN_03 = 3;
-        static readonly int PIN_04 = 4;
-        static readonly int PIN_14 = 14;
-        static int motorPhase1 = 0;
-        static readonly int PIN_15 = 15; //Piny silnika krokowego nr 2 - podajnik pokarmu
-        static readonly int PIN_17 = 17;
-        static readonly int PIN_18 = 18;
-        static readonly int PIN_27 = 27;
-        static int motorPhase2 = 0;
-        static readonly int PIN_22 = 22; //Pin sterowania zaworem odcinającym odpływ cieczy z miski
-        static readonly int PIN_23 = 23; //Pin sterowania pompką
-        static readonly int PIN_24 = 24; //Pin czujnika obecności HC-SR501
-        static readonly int PIN_10 = 10; //Pin czujnika RFID
-        static readonly int PIN_09 = 9;  //Pin spirali grzejnej
-        static readonly int PIN_25 = 25; //Pin sterowania wentylacją 
-        static readonly int PIN_11 = 11; //Pin czujnika temperatury i wilgotności
-        static Dht11 sensor1;
+        GpioController controller;
+        readonly int PIN_02 = 2; //Piny silnika krokowego nr 1 - blokada drzwi
+        readonly int PIN_03 = 3;
+        readonly int PIN_04 = 4;
+        readonly int PIN_14 = 14;
+        int motorPhase1 = 0;
+        readonly int PIN_15 = 15; //Piny silnika krokowego nr 2 - podajnik pokarmu
+        readonly int PIN_17 = 17;
+        readonly int PIN_18 = 18;
+        readonly int PIN_27 = 27;
+        int motorPhase2 = 0;
+        readonly int PIN_22 = 22; //Pin sterowania zaworem odcinającym odpływ cieczy z miski
+        readonly int PIN_23 = 23; //Pin sterowania pompką
+        readonly int PIN_24 = 24; //Pin czujnika obecności HC-SR501
+        readonly int PIN_10 = 10; //Pin czujnika RFID
+        readonly int PIN_09 = 9;  //Pin spirali grzejnej
+        readonly int PIN_25 = 25; //Pin sterowania wentylacją 
+        readonly int PIN_11 = 11; //Pin czujnika temperatury i wilgotności
+        Dht11 sensor1;
         public const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
         public const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
         public const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
@@ -39,16 +39,16 @@ namespace PI.HomeAlgorithm
         public const double maxFoodDelay = 3600; //maksymalne opóźnienie podania jedzenia wynikające z obecności kota w domku 
         public const double maxRFIDDelay = 120; //maksymalne opóźnienie zamknięcia drzwi
         public double RFIDTime = -1; //godzina do której mogą być otwarte drzwi
-        static bool isDoorOpen = true;
-        static bool isHeatingOn = false;
-        static bool isVentilationOn = false;
-        static bool wasFoodGivenToday = false;
-        static double Tz = 16;
-        static double Tw = 16;
-        static double H = 75;
-        static double catMass = 5;
-        static double weight = 5;
-        static int time = -1; //czas w sekundach danej doby
+        bool isDoorOpen = true;
+        bool isHeatingOn = false;
+        bool isVentilationOn = false;
+        bool wasFoodGivenToday = false;
+        double Tz = 16;
+        double Tw = 16;
+        double H = 75;
+        double catMass = 5;
+        double weight = 5;
+        int time = -1; //czas w sekundach danej doby
         #endregion
 
         public Home()
@@ -190,7 +190,7 @@ namespace PI.HomeAlgorithm
             }
         }
 
-        static int MotorMove(bool direction, int motorPhase, int steps, bool halfStepsOn, int stepTime, int PIN_A, int PIN_B, int PIN_C, int PIN_D)
+        int MotorMove(bool direction, int motorPhase, int steps, bool halfStepsOn, int stepTime, int PIN_A, int PIN_B, int PIN_C, int PIN_D)
         {//direction=true - zgodny z regułą prawej dłoni, dla zwrotu wyjścia wału z obudowy, stepTime - czas pomiędzy kolejnymi krokami
             int stepsMade = 0;
             if (direction == true)
@@ -289,46 +289,46 @@ namespace PI.HomeAlgorithm
             return motorPhase;
         }
 
-        static double TempIn() // temperatura wewnątrz domku
+        double TempIn() // temperatura wewnątrz domku
         {
             //odczytanie temp. wewn. domku
             double Tw = Convert.ToDouble($"{sensor1.Temperature.DegreesCelsius:0.#}");
             return Tw;
         }
 
-        static double TempOut() // temperatura na zewnątrz domku
+        double TempOut() // temperatura na zewnątrz domku
         {
             double Tz = 0; //zrezygnowano z tego czujnika, więc przyjęto wartość zapewniającą włączenie ogrzewania przy wentylacji
             return Tz;
         }
 
-        static double Humidity() // wilgotność wewnątrz domku
+        double Humidity() // wilgotność wewnątrz domku
         {
             //odczytanie wilgotnosci
             double H = Convert.ToDouble($"{sensor1.Humidity:0.#}");
             return H;
         }
 
-        static double Weight() // wskazanie wagi
+        double Weight() // wskazanie wagi
         {
             //TBD
             double m = 5; // TYMCZASOWO USTAWIONA WARTOŚĆ
             return m;
         }
 
-        static bool Presence() // 1 - stwierdzono obecnosc kota w domku, 0 - nie stwierdzono
+        bool Presence() // 1 - stwierdzono obecnosc kota w domku, 0 - nie stwierdzono
         {
             //sprawdzenie obecnosci
             return PinValue.High.Equals(controller.Read(PIN_24));
         }
 
-        static bool RFID() // 1 - wykryto znacznik RFID kota, 0 - nie wykryto
+        bool RFID() // 1 - wykryto znacznik RFID kota, 0 - nie wykryto
         {
             //sprawdzenie RFID
             return PinValue.High.Equals(controller.Read(PIN_10));
         }
 
-        static void Door(bool isOpen) // 1 - odblokuj drzwi, 0 - zablokuj drzwi
+        void Door(bool isOpen) // 1 - odblokuj drzwi, 0 - zablokuj drzwi
         {
             if (isOpen) //otwieranie drzwi 
             {
@@ -340,7 +340,7 @@ namespace PI.HomeAlgorithm
             }
         }
 
-        static void Heating(bool isOn) // 1 - wlącz grzanie, 0 - wyłącz grzanie
+        void Heating(bool isOn) // 1 - wlącz grzanie, 0 - wyłącz grzanie
         {
             if (isOn) //wlaczanie spirali grzejnej
             {
@@ -352,7 +352,7 @@ namespace PI.HomeAlgorithm
             }
         }
 
-        static void Ventilation(bool isOn) // 1 - włącz wentylację, 0 - wyłącz wentylację
+        void Ventilation(bool isOn) // 1 - włącz wentylację, 0 - wyłącz wentylację
         {
             if (isOn) //wlaczenie wentylacji
             {
@@ -364,7 +364,7 @@ namespace PI.HomeAlgorithm
             }
         }
 
-        static int GetTime() // zwraca pore dnia w sekundach
+        int GetTime() // zwraca pore dnia w sekundach
         {
             int t = (int)(DateTime.Now - DateTime.Today).TotalSeconds;
             return t;
