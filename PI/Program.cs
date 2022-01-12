@@ -1,4 +1,4 @@
-﻿using IotHubCommunication.CommunicationProvider;
+﻿using Communication.CommunicationProvider;
 using Microsoft.Azure.Devices;
 using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
@@ -26,7 +26,7 @@ namespace PI
             //}
             //Console.WriteLine("Podłączono debuger");
 
-            Communication communication = new Communication();
+            CommunicationProvider communication = new Communication();
 
             Home homeAlgorithm = new Home();
             homeAlgorithm.Start();                      

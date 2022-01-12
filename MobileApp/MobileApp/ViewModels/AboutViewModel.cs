@@ -33,7 +33,7 @@ namespace MobileApp.ViewModels
             set { SetProperty(ref preasure, value); }
         }
 
-        private bool isPlaying;
+        private bool isPlaying = true;
         public bool IsPlaying
         {
             get { return isPlaying; }
