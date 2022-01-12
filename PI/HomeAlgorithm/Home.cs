@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Communication.CommunicationProvider;
 using Communication.CommunicationProvider.Messages;
 using Iot.Device.DHTxx;
+using System.Runtime.InteropServices;
 
 namespace PI.HomeAlgorithm
 {
@@ -17,8 +18,8 @@ namespace PI.HomeAlgorithm
         GpioController controller;
         CommunicationProvider CommunicationProvider { get; }
         CommunicationCommands Command { get; set; }
-        readonly int PIN_02 = 2; //Piny silnika krokowego nr 1 - blokada drzwi
-        readonly int PIN_03 = 3;
+        readonly int PIN_02 = 8; //Piny silnika krokowego nr 1 - blokada drzwi
+        readonly int PIN_03 = 7;
         readonly int PIN_04 = 4;
         readonly int PIN_14 = 14;
         int motorPhase1 = 0;
@@ -50,9 +51,18 @@ namespace PI.HomeAlgorithm
         double Tz = 16;
         double Tw = 16;
         double H = 75;
-        double catMass = 5;
-        double weight = 5;
+        double catMass = 0;
+        double weight = 0;
         int time = -1; //czas w sekundach danej doby
+        //I2c
+        int OPEN_READ_WRITE = 2;
+        int I2C_SLAVE = 0x0703;
+        [DllImport("libc.so.6", EntryPoint = "open")]
+        public static extern int Open(string fileName, int mode);
+        [DllImport("libc.so.6", EntryPoint = "ioctl", SetLastError = true)]
+        private extern static int Ioctl(int fd, int request, int data);
+        [DllImport("libc.so.6", EntryPoint = "read", SetLastError = true)]
+        internal static extern int Read(int handle, byte[] data, int length);
         #endregion
 
         public Home(CommunicationProvider communicationProvider)
@@ -340,8 +350,20 @@ namespace PI.HomeAlgorithm
 
         double Weight() // wskazanie wagi
         {
-            //TBD
-            double m = 5; // TYMCZASOWO USTAWIONA WARTOŚĆ
+            // ustawienie czytania z magistrali I2c nr 1
+            var i2cBushandle = Open("/dev/i2c-1", OPEN_READ_WRITE); 
+            // otwarcie komunikacji z układem slave o adresie 0x48
+            int registerAddress = 0x48;
+            var deviceReturnCode = Ioctl(i2cBushandle, I2C_SLAVE, registerAddress);
+            // wczytywanie 10 bitów z urządzenia do tablicy
+            var deviceDataInMemory = new byte[10];
+            Read(i2cBushandle, deviceDataInMemory, deviceDataInMemory.Length);
+            double sum = 0;
+            for(int i = 0; i < 10; i++)
+            {
+                sum += Math.Pow(2,9-i) * deviceDataInMemory[i];
+            }
+            double m = sum / 1023 * 10;
             return m;
         }
 
