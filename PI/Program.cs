@@ -26,9 +26,8 @@ namespace PI
             //}
             //Console.WriteLine("Podłączono debuger");
 
-            CommunicationProvider communication = new Communication();
-
-            Home homeAlgorithm = new Home();
+            CommunicationProvider communication = new CommunicationProvider();
+            Home homeAlgorithm = new Home(communication);
             homeAlgorithm.Start();                      
         }         
     }

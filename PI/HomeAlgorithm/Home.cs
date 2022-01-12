@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Communication.CommunicationProvider;
+using Communication.CommunicationProvider.Messages;
 using Iot.Device.DHTxx;
 
 namespace PI.HomeAlgorithm
@@ -13,6 +15,8 @@ namespace PI.HomeAlgorithm
     {
         #region Raspberry
         GpioController controller;
+        CommunicationProvider CommunicationProvider { get; }
+        CommunicationCommands Command { get; set; }
         readonly int PIN_02 = 2; //Piny silnika krokowego nr 1 - blokada drzwi
         readonly int PIN_03 = 3;
         readonly int PIN_04 = 4;
@@ -31,14 +35,14 @@ namespace PI.HomeAlgorithm
         readonly int PIN_25 = 25; //Pin sterowania wentylacją 
         readonly int PIN_11 = 11; //Pin czujnika temperatury i wilgotności
         Dht11 sensor1;
-        public const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
-        public const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
-        public const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
-        public const double tFood = 43200; //standardowa godzina podania jedzenia kotu wyrażona w sekundach np. 62 to 00:01:02
-        public const double tWater = 43200; //standardowa godzina wymiany wody
-        public const double maxFoodDelay = 3600; //maksymalne opóźnienie podania jedzenia wynikające z obecności kota w domku 
-        public const double maxRFIDDelay = 120; //maksymalne opóźnienie zamknięcia drzwi
-        public double RFIDTime = -1; //godzina do której mogą być otwarte drzwi
+        private const double Hgr = 80; //graniczna wilgotność przy której włączana i wyłączana jest wentylacja
+        private const double Twgr = 16; //graniczna temp. wewn. domku przy której włączane i wyłączane jest grzanie
+        private const double Tzgr = 10; //graniczna temp. zewn. od której zależy czy grzanie zostanie włączone przy uruchomionej wentylacji
+        private const double tFood = 43200; //standardowa godzina podania jedzenia kotu wyrażona w sekundach np. 62 to 00:01:02
+        private const double tWater = 43200; //standardowa godzina wymiany wody
+        private const double maxFoodDelay = 3600; //maksymalne opóźnienie podania jedzenia wynikające z obecności kota w domku 
+        private const double maxRFIDDelay = 120; //maksymalne opóźnienie zamknięcia drzwi
+        private double RFIDTime = -1; //godzina do której mogą być otwarte drzwi
         bool isDoorOpen = true;
         bool isHeatingOn = false;
         bool isVentilationOn = false;
@@ -51,8 +55,9 @@ namespace PI.HomeAlgorithm
         int time = -1; //czas w sekundach danej doby
         #endregion
 
-        public Home()
+        public Home(CommunicationProvider communicationProvider)
         {
+            CommunicationProvider = communicationProvider;
             controller = new GpioController();
             controller.OpenPin(PIN_02, PinMode.Output);
             controller.OpenPin(PIN_03, PinMode.Output);
@@ -86,9 +91,33 @@ namespace PI.HomeAlgorithm
         }
         public void Start()
         {
+
             //główna pętla programu
             while (true)
             {
+                var response = CommunicationProvider.ReceiveAsync<Message>();
+
+                Command = response.Result.Command;
+                
+                if(Command == CommunicationCommands.ParametersInfo)
+                {
+                    CommunicationProvider.SendCloudToDeviceMessageAsync(new Message()).Wait();
+                }
+                else if(Command == CommunicationCommands.GiveFood)
+                {
+                    motorPhase2 = MotorMove(true, motorPhase2, 9000, true, 1, PIN_15, PIN_17, PIN_18, PIN_27);
+                }
+                else if (Command == CommunicationCommands.GiveWatter)
+                {
+                    controller.Write(PIN_22, 1); //otwarcie zaworu
+                    Thread.Sleep(5000);
+                    controller.Write(PIN_22, 0); //zamknięcie zaworu
+                }
+                else if (Command == CommunicationCommands.ResetHome)
+                {
+                    Environment.Exit(0);
+                }
+
                 //aktualizowanie godziny
                 if (GetTime() < time)
                 {

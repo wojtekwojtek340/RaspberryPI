@@ -55,7 +55,6 @@ namespace MobileApp.ViewModels
         }
 
         private string videoInfo;
-
         public string VideoInfo
 
         {
