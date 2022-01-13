@@ -282,47 +282,50 @@ namespace PI.HomeAlgorithm
             }
             else
             {
-                switch (motorPhase)
+                while (stepsMade < steps)
                 {
-                    case 0: //1000 jest i zmiana na case 1 itd.
-                        controller.Write(PIN_D, 1);
-                        motorPhase = 7;
-                        break;
-                    case 1: //1100
-                        controller.Write(PIN_B, 0);
-                        motorPhase--;
-                        break;
-                    case 2: //0100
-                        controller.Write(PIN_A, 1);
-                        motorPhase--;
-                        break;
-                    case 3: //0110
-                        controller.Write(PIN_C, 0);
-                        motorPhase--;
-                        break;
-                    case 4: //0010
-                        controller.Write(PIN_B, 1);
-                        motorPhase--;
-                        break;
-                    case 5: //0011
-                        controller.Write(PIN_D, 0);
-                        motorPhase--;
-                        break;
-                    case 6: //0001
-                        controller.Write(PIN_C, 1);
-                        motorPhase--;
-                        break;
-                    case 7: //1001
-                        controller.Write(PIN_A, 0);
-                        motorPhase--;
-                        break;
-                    default:
-                        break;
-                }
-                stepsMade++;
-                if (halfStepsOn || (stepsMade % 2 == 0))
-                {
-                    Thread.Sleep(stepTime);
+                    switch (motorPhase)
+                    {
+                        case 0: //1000 jest i zmiana na case 1 itd.
+                            controller.Write(PIN_D, 1);
+                            motorPhase = 7;
+                            break;
+                        case 1: //1100
+                            controller.Write(PIN_B, 0);
+                            motorPhase--;
+                            break;
+                        case 2: //0100
+                            controller.Write(PIN_A, 1);
+                            motorPhase--;
+                            break;
+                        case 3: //0110
+                            controller.Write(PIN_C, 0);
+                            motorPhase--;
+                            break;
+                        case 4: //0010
+                            controller.Write(PIN_B, 1);
+                            motorPhase--;
+                            break;
+                        case 5: //0011
+                            controller.Write(PIN_D, 0);
+                            motorPhase--;
+                            break;
+                        case 6: //0001
+                            controller.Write(PIN_C, 1);
+                            motorPhase--;
+                            break;
+                        case 7: //1001
+                            controller.Write(PIN_A, 0);
+                            motorPhase--;
+                            break;
+                        default:
+                            break;
+                    }
+                    stepsMade++;
+                    if (halfStepsOn || (stepsMade % 2 == 0))
+                    {
+                        Thread.Sleep(stepTime);
+                    }
                 }
             }
             return motorPhase;
